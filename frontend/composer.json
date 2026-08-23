@@ -1,0 +1,6 @@
+{
+    "require": {
+        "stripe/stripe-php": "^10.0",
+        "compwright/php-session": "^3.3"
+    }
+}

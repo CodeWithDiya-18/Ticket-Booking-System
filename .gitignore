@@ -1,0 +1,17 @@
+CLAUDE.md
+
+# Python
+__pycache__/
+*.py[cod]
+
+# SQLite database (runtime data, seeded from JSON backups)
+backend/data/*.db
+backend/data/*.db-wal
+backend/data/*.db-shm
+
+# Generated tickets / QR codes / PDFs
+backend/codes/
+
+# Docker / secrets
+.env
+frontend/vendor/

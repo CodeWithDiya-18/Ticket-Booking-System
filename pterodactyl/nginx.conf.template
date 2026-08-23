@@ -1,0 +1,66 @@
+# Rendered at startup by qrgate-ptero.sh (envsubst fills ${SERVER_PORT}).
+# Rootless: no `user` directive, all writable paths under /tmp.
+worker_processes auto;
+pid /tmp/qrgate-nginx.pid;
+error_log /dev/stderr warn;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+
+    access_log /dev/stdout;
+
+    # Pterodactyl runs as a non-root user; default temp dirs aren't writable.
+    client_body_temp_path /tmp/qrgate-nginx/body;
+    proxy_temp_path       /tmp/qrgate-nginx/proxy;
+    fastcgi_temp_path     /tmp/qrgate-nginx/fastcgi;
+    uwsgi_temp_path       /tmp/qrgate-nginx/uwsgi;
+    scgi_temp_path        /tmp/qrgate-nginx/scgi;
+
+    sendfile        on;
+    keepalive_timeout  65;
+    client_max_body_size 40m;
+
+    server {
+        listen ${SERVER_PORT} default_server;
+        server_name _;
+
+        root  /app/frontend;
+        index index.php index.html;
+
+        location ~* /(config\.php|composer\.(json|lock))$ {
+            deny all;
+            return 404;
+        }
+        location ~ /\.(?!well-known) {
+            deny all;
+        }
+
+        rewrite ^/install/?$ /install.php last;
+
+        # Serve backend-hosted images same-origin (backend is internal-only).
+        location /api/image/ {
+            proxy_pass http://127.0.0.1:1654;
+            proxy_set_header Host $host;
+        }
+        location /api/show/cast/image/ {
+            proxy_pass http://127.0.0.1:1654;
+            proxy_set_header Host $host;
+        }
+
+        location / {
+            try_files $uri $uri/ /index.php?$query_string;
+        }
+
+        location ~ \.php$ {
+            include /etc/nginx/fastcgi_params;
+            fastcgi_pass 127.0.0.1:9000;
+            fastcgi_index index.php;
+            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        }
+    }
+}
